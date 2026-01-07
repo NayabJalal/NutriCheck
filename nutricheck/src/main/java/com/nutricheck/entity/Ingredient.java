@@ -1,9 +1,17 @@
 package com.nutricheck.entity;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "ingredients")
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 public class Ingredient {
 
     @Id
