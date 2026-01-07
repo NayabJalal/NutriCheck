@@ -1,6 +1,8 @@
 package com.nutricheck.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -19,4 +21,10 @@ public class Scan {
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
+
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
 }
