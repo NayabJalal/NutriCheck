@@ -45,6 +45,9 @@ dependencies {
 	compileOnly 'org.projectlombok:lombok:1.18.32'
 	annotationProcessor 'org.projectlombok:lombok:1.18.32'
 
+	// Logging
+	implementation("commons-logging:commons-logging:1.3.5")
+
 	// ModelMapper
 	implementation 'org.modelmapper:modelmapper:3.2.6'
 
