@@ -1,22 +1,19 @@
 package com.nutricheck.controller;
 
 import com.nutricheck.service.IngredientAIService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/ai")
 public class IngredientAIController {
 
-    private static final Logger log = LoggerFactory.getLogger(IngredientAIController.class);
-
     private final IngredientAIService aiService;
-
     public IngredientAIController(IngredientAIService aiService) {
         this.aiService = aiService;
     }
