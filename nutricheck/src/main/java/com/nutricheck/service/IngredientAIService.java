@@ -1,5 +1,6 @@
 package com.nutricheck.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ChatModel;
@@ -7,6 +8,8 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.ollama.api.OllamaOptions;
 import org.springframework.stereotype.Service;
+
+import java.util.Map;
 
 /**
  * Service for ingredient analysis using Spring AI with Ollama
@@ -17,9 +20,9 @@ public class IngredientAIService {
 
     private static final Logger log =
             LoggerFactory.getLogger(IngredientAIService.class);
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final ChatModel chatModel;
-
     public IngredientAIService(ChatModel chatModel) {
         this.chatModel = chatModel;
     }
@@ -28,20 +31,28 @@ public class IngredientAIService {
        Public API methods
        ------------------------------------------------------ */
 
-    public String analyzeIngredients(String ingredientList) {
-        return callAI(buildIngredientAnalysisPrompt(ingredientList));
+    public Map<String, Object> analyzeIngredients(String ingredientList) {
+        return parseAIResponse(
+                callAI(buildIngredientAnalysisPrompt(ingredientList))
+        );
     }
 
-    public String analyzeProductHealth(String productName, String ingredientList) {
-        return callAI(buildProductHealthPrompt(productName, ingredientList));
+    public Map<String, Object> analyzeProductHealth(String productName, String ingredientList) {
+        return parseAIResponse(
+                callAI(buildProductHealthPrompt(productName, ingredientList))
+        );
     }
 
-    public String getAlternatives(String productName) {
-        return callAI(buildAlternativesPrompt(productName));
+    public Map<String, Object> getAlternatives(String productName) {
+        return parseAIResponse(
+                callAI(buildAlternativesPrompt(productName))
+        );
     }
 
-    public String identifyHarmfulIngredients(String ingredientList) {
-        return callAI(buildHarmfulIngredientsPrompt(ingredientList));
+    public Map<String, Object> identifyHarmfulIngredients(String ingredientList) {
+        return parseAIResponse(
+                callAI(buildHarmfulIngredientsPrompt(ingredientList))
+        );
     }
 
     /* ------------------------------------------------------
@@ -62,17 +73,27 @@ public class IngredientAIService {
 
             ChatResponse response = chatModel.call(prompt);
 
-            String result = response
+            return response
                     .getResult()
                     .getOutput()
                     .getContent();
 
-            log.info("✓ AI response received successfully");
-            return result;
-
         } catch (Exception e) {
             log.error("❌ Error calling AI", e);
-            return "Error analyzing with AI: " + e.getMessage();
+            throw new RuntimeException("AI call failed", e);
+        }
+    }
+
+    /* ------------------------------------------------------
+     JSON parsing (MOST IMPORTANT PART)
+     ------------------------------------------------------ */
+
+    private Map<String, Object> parseAIResponse(String aiJson) {
+        try {
+            return objectMapper.readValue(aiJson, Map.class);
+        } catch (Exception e) {
+            log.error("❌ Failed to parse AI JSON", e);
+            throw new RuntimeException("Invalid AI JSON response", e);
         }
     }
 
@@ -82,67 +103,129 @@ public class IngredientAIService {
 
     private String buildIngredientAnalysisPrompt(String ingredientList) {
         return String.format("""
-                You are a nutrition expert. Analyze the following ingredients.
+        You are a nutrition expert.
 
-                Ingredients:
-                %s
+        Analyze the ingredients listed below.
 
-                For each ingredient provide:
-                - Risk Level (LOW / MEDIUM / HIGH)
-                - What it is
-                - Potential health concerns
-                - Who should avoid it (if applicable)
+        Ingredients:
+        %s
 
-                Then give an overall health assessment.
-                Keep the answer clear and concise.
-                """, ingredientList);
+        Respond ONLY in valid JSON.
+        Do NOT include explanations, markdown, or extra text.
+
+        Use the following JSON structure exactly:
+
+        {
+          "ingredientsAnalysis": [
+            {
+              "name": "string",
+              "riskLevel": "LOW | MEDIUM | HIGH",
+              "whatItIs": "string",
+              "healthConcerns": "string",
+              "whoShouldAvoid": "string"
+            }
+          ],
+          "overallAssessment": "string"
+        }
+
+        Rules:
+        - Include ALL ingredients from the list
+        - riskLevel must be one of: LOW, MEDIUM, HIGH
+        - If no specific avoidance is needed, use "General population"
+        - Keep explanations concise and factual
+        - Base responses on generally accepted nutrition knowledge
+        """, ingredientList);
     }
 
     private String buildProductHealthPrompt(String productName, String ingredientList) {
         return String.format("""
-                You are a nutrition expert.
+        You are a nutrition expert.
 
-                Product: %s
-                Ingredients: %s
+        Analyze the product based on the information below.
 
-                Provide:
-                - Nutritional assessment
-                - Health benefits
-                - Health concerns
-                - Who should avoid it
-                - Overall health score (1–10)
+        Product: %s
+        Ingredients: %s
 
-                Be factual and concise.
-                """, productName, ingredientList);
+        Respond ONLY in valid JSON.
+        Do NOT include explanations, markdown, or extra text.
+
+        Use the following JSON structure exactly:
+
+        {
+          "productName": "string",
+          "nutritionalAssessment": "string",
+          "healthBenefits": "string",
+          "healthConcerns": "string",
+          "whoShouldAvoid": "string",
+          "overallHealthScore": number
+        }
+
+        Rules:
+        - overallHealthScore must be a number between 1 and 10
+        - Be factual, concise, and evidence-based
+        - Avoid exaggerated claims
+        - Focus on general nutrition and safety
+        """, productName, ingredientList);
     }
 
     private String buildAlternativesPrompt(String productName) {
         return String.format("""
-                Suggest healthier alternatives for the product: %s
+        You are a nutrition expert.
 
-                For each alternative include:
-                - Product name
-                - Why it is healthier
-                - Key nutritional benefit
+        Suggest healthier alternatives for the product: %s.
 
-                Provide practical, commonly available options.
-                """, productName);
+        Respond ONLY in valid JSON.
+        Do NOT include explanations, markdown, or extra text.
+
+        Use the following JSON structure exactly:
+
+        {
+          "alternatives": [
+            {
+              "name": "string",
+              "whyHealthier": "string",
+              "keyNutritionalBenefit": "string"
+            }
+          ]
+        }
+
+        Rules:
+        - Provide 3 to 5 alternatives
+        - Alternatives must be commonly available products
+        - Keep text short and clear
+        """, productName);
     }
 
     private String buildHarmfulIngredientsPrompt(String ingredientList) {
         return String.format("""
-                Identify potentially harmful ingredients from the list below.
+        You are a nutrition and food safety expert.
 
-                Ingredients:
-                %s
+        Identify ONLY potentially harmful or concerning ingredients from the list below.
 
-                For each harmful ingredient include:
-                - Name
-                - Health risks
-                - Who should avoid it
-                - Safe limits (if any)
+        Ingredients:
+        %s
 
-                Only include ingredients with known or suspected risks.
-                """, ingredientList);
+        Respond ONLY in valid JSON.
+        Do NOT include explanations, markdown, or extra text.
+
+        Use the following JSON structure exactly:
+
+        {
+          "harmfulIngredients": [
+            {
+              "name": "string",
+              "healthRisks": "string",
+              "whoShouldAvoid": "string",
+              "safeLimits": "string"
+            }
+          ]
+        }
+
+        Rules:
+        - Include only ingredients with proven or suspected health risks
+        - If no ingredients are harmful, return an empty array
+        - Keep responses concise and factual
+        - Base answers on generally accepted nutrition knowledge
+        """, ingredientList);
     }
 }
