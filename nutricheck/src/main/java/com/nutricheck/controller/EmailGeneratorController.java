@@ -1,0 +1,24 @@
+package com.nutricheck.controller;
+
+import com.nutricheck.dto.EmailRequest;
+import com.nutricheck.service.EmailGeneratorService;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@Slf4j
+@RestController
+@RequestMapping("/api/email")
+@AllArgsConstructor
+@CrossOrigin(origins = "*")
+public class EmailGeneratorController {
+
+    private final EmailGeneratorService emailGeneratorService;
+
+    @PostMapping("/generate")
+    public ResponseEntity<String> generateEmail(@RequestBody EmailRequest emailRequest){
+        String response = emailGeneratorService.generateEmailReply(emailRequest);
+        return ResponseEntity.ok(response);
+    }
+}

@@ -45,6 +45,15 @@ dependencies {
 	compileOnly 'org.projectlombok:lombok:1.18.32'
 	annotationProcessor 'org.projectlombok:lombok:1.18.32'
 
+	// Spring Boot WebFlux starter
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+	// Project Reactor Test (Scoped for testing only)
+	testImplementation 'io.projectreactor:reactor-test'
+
+	// Google GenAI SDK
+	implementation 'com.google.genai:google-genai:1.0.0'
+
 	// Logging
 	implementation("commons-logging:commons-logging:1.3.5")
 
