@@ -10,10 +10,10 @@ import org.springframework.web.reactive.function.client.WebClient;
 import java.util.Map;
 
 @Service
-public class EmailGeneratorService {
+public class AiService {
 
     private final WebClient webClient;
-    public EmailGeneratorService(WebClient.Builder webClientBuilder) {
+    public AiService(WebClient.Builder webClientBuilder) {
         this.webClient = webClientBuilder.build();
     }
 
@@ -23,7 +23,7 @@ public class EmailGeneratorService {
     @Value("${gemini.api.key}")
     private String geminiApiKey;
 
-    public String generateEmailReply(EmailRequest emailRequest){
+    public String generateAiReply(EmailRequest emailRequest){
         //Build the prompt
         String prompt = buildPrompt(emailRequest);
 
@@ -78,11 +78,41 @@ public class EmailGeneratorService {
 
     private String buildPrompt(EmailRequest emailRequest) {
         StringBuilder prompt = new StringBuilder();
-        prompt.append("Generate a professional email reply for the following email content. Please don't generate a subject line. Don't tell me to choose any option, I want single best option. Give only the email response and not unesessary things ");
-        if(emailRequest.getTone() != null && !emailRequest.getTone().isEmpty()){
-            prompt.append("Use").append(emailRequest.getTone()).append("tone");
-        }
-        prompt.append("\nOriginal Email : \n").append(emailRequest.getEmailContent());
+
+        // 1. Set the Persona
+        prompt.append("You are a highly qualified Nutritionist and Product Safety Expert. ");
+        prompt.append("Analyze the following ingredients list strictly for a ")
+                .append(emailRequest.getProductCategory()) // e.g., FOOD, COSMETICS
+                .append(" product.\n\n");
+
+        // 2. Add the Ingredients
+        prompt.append("### Ingredients List:\n")
+                .append(emailRequest.getIngredients())
+                .append("\n\n");
+
+        // 3. Define the Response Structure
+        prompt.append("### Instructions:\n");
+        prompt.append("- Sort the ingredients from LEAST harmful to MOST harmful.\n");
+        prompt.append("- Identify any harmful additives, preservatives, or allergens.\n");
+        prompt.append("- For each harmful ingredient, explain the specific health risk.\n");
+        prompt.append("- Provide a final 'Safety Score' from 1 to 10 (10 being safest).\n");
+        prompt.append("- Suggest if there are any specific groups (e.g., children, pregnant women) who should avoid this.\n\n");
+
+//        // 4. Add User's specific question/message if provided
+//        if (emailRequest.getMessage() != null && !EmailRequest.getMessage().isBlank()) {
+//            prompt.append("### User Specific Question:\n")
+//                    .append(emailRequest.getMessage())
+//                    .append("\n\n");
+//        }
+
+        prompt.append("Keep the analysis factual, concise, and easy for a regular consumer to understand.");
+         prompt.append(
+                "Format the response in simple sections with short bullet points. " +
+                        "Avoid medical jargon. Write as if explaining to a normal consumer. " +
+                        "Do NOT use long paragraphs. Keep it easy to read."+
+                        "- DO NOT write any introductory or persona sentences."
+        );
+
         return prompt.toString();
     }
 
