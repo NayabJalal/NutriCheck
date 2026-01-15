@@ -1,9 +1,13 @@
 package com.nutricheck.dto;
 
+import com.nutricheck.dto.enums.ProductCategory;
 import lombok.Data;
 
 @Data
 public class EmailRequest {
-    private String emailContent;
-    private String tone;
+    private String ingredients;
+
+    private ProductCategory productCategory;
+
+
 }

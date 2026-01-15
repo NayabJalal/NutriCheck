@@ -1,7 +1,7 @@
 package com.nutricheck.controller;
 
 import com.nutricheck.dto.EmailRequest;
-import com.nutricheck.service.EmailGeneratorService;
+import com.nutricheck.service.AiService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -9,16 +9,16 @@ import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/email")
+@RequestMapping("/api/scan")
 @AllArgsConstructor
 @CrossOrigin(origins = "*")
-public class EmailGeneratorController {
+public class AiController {
 
-    private final EmailGeneratorService emailGeneratorService;
+    private final AiService aiService;
 
-    @PostMapping("/generate")
+    @PostMapping("/ingredients")
     public ResponseEntity<String> generateEmail(@RequestBody EmailRequest emailRequest){
-        String response = emailGeneratorService.generateEmailReply(emailRequest);
+        String response = aiService.generateAiReply(emailRequest);
         return ResponseEntity.ok(response);
     }
 }
