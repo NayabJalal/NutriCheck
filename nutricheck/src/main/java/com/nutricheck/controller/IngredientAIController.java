@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
@@ -14,6 +13,7 @@ import java.util.Map;
 public class IngredientAIController {
 
     private final IngredientAIService aiService;
+
     public IngredientAIController(IngredientAIService aiService) {
         this.aiService = aiService;
     }
@@ -22,25 +22,21 @@ public class IngredientAIController {
      * Test endpoint
      */
     @GetMapping("/test")
-    public ResponseEntity<Map<String, String>> test(
-            @RequestParam(defaultValue = "Hello") String message) {
+    public ResponseEntity<Map<String, Object>> test(
+            @RequestParam(defaultValue = "Sugar, Salt") String message) {
 
-        log.info("Testing AI with message: {}", message);
+        log.info("Testing AI with ingredients: {}", message);
 
-        String response = aiService.analyzeIngredients(message);
-
-        Map<String, String> result = new HashMap<>();
-        result.put("request", message);
-        result.put("response", response);
-
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(
+                aiService.analyzeIngredients(message)
+        );
     }
 
     /**
      * Analyze ingredients
      */
     @PostMapping("/analyze-ingredients")
-    public ResponseEntity<Map<String, String>> analyzeIngredients(
+    public ResponseEntity<Map<String, Object>> analyzeIngredients(
             @RequestBody Map<String, String> request) {
 
         String ingredients = request.get("ingredients");
@@ -50,22 +46,18 @@ public class IngredientAIController {
                     .body(Map.of("error", "Ingredients list is required"));
         }
 
-        log.info("Analyzing ingredients: {}", ingredients);
+        log.info("Analyzing ingredients");
 
-        String analysis = aiService.analyzeIngredients(ingredients);
-
-        Map<String, String> result = new HashMap<>();
-        result.put("ingredients", ingredients);
-        result.put("analysis", analysis);
-
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(
+                aiService.analyzeIngredients(ingredients)
+        );
     }
 
     /**
      * Analyze product health
      */
     @PostMapping("/analyze-product")
-    public ResponseEntity<Map<String, String>> analyzeProduct(
+    public ResponseEntity<Map<String, Object>> analyzeProduct(
             @RequestBody Map<String, String> request) {
 
         String productName = request.get("productName");
@@ -78,21 +70,16 @@ public class IngredientAIController {
 
         log.info("Analyzing product: {}", productName);
 
-        String analysis = aiService.analyzeProductHealth(productName, ingredients);
-
-        Map<String, String> result = new HashMap<>();
-        result.put("productName", productName);
-        result.put("ingredients", ingredients);
-        result.put("analysis", analysis);
-
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(
+                aiService.analyzeProductHealth(productName, ingredients)
+        );
     }
 
     /**
      * Get healthier alternatives
      */
     @PostMapping("/alternatives")
-    public ResponseEntity<Map<String, String>> getAlternatives(
+    public ResponseEntity<Map<String, Object>> getAlternatives(
             @RequestBody Map<String, String> request) {
 
         String productName = request.get("productName");
@@ -104,20 +91,16 @@ public class IngredientAIController {
 
         log.info("Getting alternatives for: {}", productName);
 
-        String alternatives = aiService.getAlternatives(productName);
-
-        Map<String, String> result = new HashMap<>();
-        result.put("productName", productName);
-        result.put("alternatives", alternatives);
-
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(
+                aiService.getAlternatives(productName)
+        );
     }
 
     /**
      * Identify harmful ingredients
      */
     @PostMapping("/identify-harmful")
-    public ResponseEntity<Map<String, String>> identifyHarmful(
+    public ResponseEntity<Map<String, Object>> identifyHarmful(
             @RequestBody Map<String, String> request) {
 
         String ingredients = request.get("ingredients");
@@ -129,12 +112,8 @@ public class IngredientAIController {
 
         log.info("Identifying harmful ingredients");
 
-        String analysis = aiService.identifyHarmfulIngredients(ingredients);
-
-        Map<String, String> result = new HashMap<>();
-        result.put("ingredients", ingredients);
-        result.put("harmfulAnalysis", analysis);
-
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(
+                aiService.identifyHarmfulIngredients(ingredients)
+        );
     }
 }
