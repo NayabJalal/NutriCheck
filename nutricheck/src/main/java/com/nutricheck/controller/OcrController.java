@@ -24,10 +24,9 @@ public class OcrController {
     private final OcrService ocrService;
     private final ScanService scanService;
 
-    /**
-     * Upload and analyze product image
-     * Returns complete analysis with all ingredients
-     */
+
+//    Upload and analyze product image
+//    Returns complete analysis with all ingredients
     @PostMapping("/image")
     public ResponseEntity<?> uploadScan(
             @RequestParam("image") MultipartFile file,
