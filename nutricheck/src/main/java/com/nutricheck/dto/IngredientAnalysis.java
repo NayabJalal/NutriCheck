@@ -20,4 +20,5 @@ public class IngredientAnalysis {
     private String description;
     private String category;
     private List<String> sideEffects;
+    
 }
