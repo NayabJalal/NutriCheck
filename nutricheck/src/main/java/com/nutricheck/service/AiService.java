@@ -1,134 +1,79 @@
 package com.nutricheck.service;
-
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nutricheck.dto.AiAnalysisResponse;
 import com.nutricheck.dto.ScanRequest;
 import com.nutricheck.dto.enums.ProductCategory;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.content.Media;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.util.MimeTypeUtils;
 
-import java.util.Base64;
-import java.util.Map;
+import java.util.List;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class AiService {
 
-    private final WebClient webClient;
+    private final ChatModel chatModel;
     private final ObjectMapper objectMapper;
 
-    public AiService(WebClient.Builder webClientBuilder, ObjectMapper objectMapper) {
-        this.webClient = webClientBuilder.build();
-        this.objectMapper = objectMapper;
-    }
-
-    @Value("${gemini.api.url}")
-    private String geminiApiUrl;
-
-    @Value("${gemini.api.key}")
-    private String geminiApiKey;
-
     /**
-     * Text-based analysis - returns structured response
+     * Text-based analysis
      */
     public AiAnalysisResponse generateAiReply(ScanRequest scanRequest) {
         String prompt = buildTextPrompt(scanRequest.getIngredients(), scanRequest.getProductCategory());
-        String jsonResponse = callGemini(prompt, null, null);
-        return parseAiResponse(jsonResponse);
+
+        log.info("Calling Gemini for text analysis...");
+        String response = chatModel.call(prompt);
+
+        return parseAiResponse(response);
     }
 
     /**
-     * Image-based analysis - returns structured response
+     * Image-based analysis using the Builder and getText()
      */
     public AiAnalysisResponse analyzeImage(byte[] imageBytes, String mimeType, ProductCategory category) {
-        String prompt = buildImagePrompt(category);
-        String jsonResponse = callGemini(prompt, imageBytes, mimeType);
-        return parseAiResponse(jsonResponse);
+        String promptText = buildImagePrompt(category);
+
+        // 1. Create Media object using the updated 1.1.2 package
+        var media = new Media(MimeTypeUtils.parseMimeType(mimeType), new ByteArrayResource(imageBytes));
+
+        // 2. FIX: Use UserMessage.builder() for multimodal input
+        // This avoids the 'private access' error with the constructor
+        var userMessage = UserMessage.builder()
+                .text(promptText)
+                .media(List.of(media))
+                .build();
+
+        log.info("Calling Gemini-2.0-Flash for image analysis...");
+
+        // 3. Execute the call using a Prompt object
+        ChatResponse response = chatModel.call(new Prompt(userMessage));
+
+        // 4. FIX: Use getText() to retrieve the content in 1.1.2
+        String resultJson = response.getResult().getOutput().getText();
+
+        return parseAiResponse(resultJson);
     }
 
-    /**
-     * Core method to call Gemini API
-     */
-    private String callGemini(String prompt, byte[] imageBytes, String mimeType) {
-        Object[] parts;
-
-        if (imageBytes != null) {
-            // Multimodal request (Text + Image)
-            parts = new Object[]{
-                    Map.of("text", prompt),
-                    Map.of("inline_data", Map.of(
-                            "mime_type", mimeType,
-                            "data", Base64.getEncoder().encodeToString(imageBytes)
-                    ))
-            };
-        } else {
-            // Text-only request
-            parts = new Object[]{
-                    Map.of("text", prompt)
-            };
-        }
-
-        Map<String, Object> requestBody = Map.of(
-                "contents", new Object[]{
-                        Map.of("parts", parts)
-                }
-        );
-
-        try {
-            String response = webClient.post()
-                    .uri(geminiApiUrl + geminiApiKey)
-                    .header("Content-Type", "application/json")
-                    .bodyValue(requestBody)
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .block();
-
-            return extractResponseContent(response);
-        } catch (Exception e) {
-            log.error("Error calling Gemini API", e);
-            throw new RuntimeException("AI call failed: " + e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Extract text content from Gemini response
-     */
-    private String extractResponseContent(String response) {
-        try {
-            JsonNode rootNode = objectMapper.readTree(response);
-            return rootNode.path("candidates")
-                    .get(0)
-                    .path("content")
-                    .path("parts")
-                    .get(0)
-                    .path("text")
-                    .asText();
-        } catch (Exception e) {
-            log.error("Error extracting Gemini response", e);
-            throw new RuntimeException("Error processing response: " + e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Parse AI JSON response to structured DTO
-     */
     private AiAnalysisResponse parseAiResponse(String jsonResponse) {
         try {
-            // Remove markdown code blocks if present
             String cleanJson = jsonResponse
                     .replaceAll("```json\\s*", "")
                     .replaceAll("```\\s*", "")
                     .trim();
 
-            log.info("Parsing AI response: {}", cleanJson);
-
             return objectMapper.readValue(cleanJson, AiAnalysisResponse.class);
         } catch (Exception e) {
             log.error("Failed to parse AI response: {}", jsonResponse, e);
-            throw new RuntimeException("Invalid AI JSON response: " + e.getMessage(), e);
+            throw new RuntimeException("Invalid AI JSON response", e);
         }
     }
 
