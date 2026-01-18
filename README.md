@@ -1,40 +1,41 @@
-# NutriCheck
+# NutriCheck v2.3.1
 
-NutriCheck is a Spring Boot based backend system designed to analyze product ingredient labels using OCR and AI-driven evaluation. The system scans ingredients from product labels (via images) and determines whether each ingredient is safe, harmful, or conditionally safe for consumption. It also provides detailed explanations and health impacts for every ingredient.
+NutriCheck is a robust Spring Boot backend application designed to analyze product ingredient labels through AI-powered evaluations and OCR (Optical Character Recognition). By integrating Google Gemini 2.0 Flash via the Spring AI framework, the system extracts ingredients from product images, assesses their safety levels (Safe, Harmful, or Needs Caution), and provides detailed health impact assessments.
 
 ---
 
-## 🚀 Features
+## 🚀 Key Features
 
-### **1. OCR-Powered Ingredient Extraction**
+### **Multimodal AI Scanning**
 
-* Integrates with Google Cloud Vision API (or other OCR providers)
-* Extracts text from product label images
-* Parses and normalizes ingredient lists
+Leverages Google Gemini 2.0 Flash to process images and text simultaneously for high-accuracy ingredient extraction.
 
-### **2. AI Ingredient Safety Analysis**
+### **Safety Analysis**
 
-* Uses an AI model (configured in Spring Boot) to analyze extracted ingredients
-* Evaluates each ingredient based on:
+Automatically categorizes ingredients into **LOW, MEDIUM, or HIGH** risk levels with detailed health explanations.
 
-  * Safety level (Safe / Harmful / Needs Caution)
-  * Known health impacts
-  * Benefits (if any)
-  * Typical use cases in food products
+### **Comprehensive Data Model**
 
-### **3. Well-Structured Backend Architecture**
+Tracks users, scan history, and a master database of unique ingredients to prevent redundant processing.
 
-* Follows clean controller–service–repository pattern
-* Supports modular AI integrations
-* Ready for extension into mobile or web applications
+### **RESTful API Architecture**
 
-### **4. Easy Integration (REST APIs)**
+Cleanly separated controllers for image scanning, ingredient-only analysis, and user management.
 
-Sample API endpoints:
+### **Local LLM Support**
 
-* `POST /api/ocr/extract` → Extract ingredients from image
-* `POST /api/ai/analyze` → Analyze ingredient safety
-* `POST /api/scan` → Full workflow: Scan + Analyze
+Integrated with Spring AI Ollama for optional local testing with models like **Llama 3**.
+
+---
+
+## 🛠️ Tech Stack
+
+* **Backend:** Java 17, Spring Boot 3.2.5
+* **AI Integration:** Spring AI 1.1.2 (Milestone)
+* **Models:** Google Gemini 2.0 Flash (via `spring-ai-starter-model-google-genai`)
+* **Database:** MySQL with Hibernate/JPA
+* **Mapping:** ModelMapper 3.2.6
+* **Build Tool:** Gradle 8.6
 
 ---
 
@@ -42,117 +43,92 @@ Sample API endpoints:
 
 ```
 NutriCheck/
- ├── src/
- │   ├── main/java/com/nutricheck/
- │   │   ├── controller/        # API Controllers (OCR, AI, Scan)
- │   │   ├── service/           # OCR & AI Logic
- │   │   ├── model/             # Ingredient models and DTOs
- │   │   └── config/            # Configurations (API keys, beans)
- │   └── main/resources/        # Application properties
- ├── pom.xml                    # Dependencies
- └── README.md
+ ├── src/main/java/com/nutricheck/
+ │   ├── controller/    # REST Endpoints (OCR, User, Scan)
+ │   ├── service/       # Business logic (Gemini AI, Image processing)
+ │   ├── repository/    # JPA Repositories (MySQL interaction)
+ │   ├── entity/        # Persistence models (Scan, Ingredient, User)
+ │   ├── dto/           # Data Transfer Objects (Requests/Responses)
+ │   └── mapper/        # Object mapping configurations
+ └── src/main/resources/
+     └── application.properties  # System configurations
 ```
-
----
-
-## 🧠 Tech Stack
-
-* **Backend:** Spring Boot (Java)
-* **OCR:** Google Cloud Vision API / Tesseract (optional)
-* **AI Model:** External LLM API (OpenAI, Gemini, or Spring AI)
-* **Build Tool:** Maven
 
 ---
 
 ## 🔧 Setup & Installation
 
-### **1. Clone the Repository**
+### **1. Prerequisites**
 
-```bash
-git clone https://github.com/your-username/nutricheck.git
-cd nutricheck
-```
+* JDK 17 or higher
+* A Google AI (Gemini) API Key
+* MySQL Database instance
 
-### **2. Configure API Keys**
+### **2. Configure Environment Variables**
 
-Add your keys inside `application.properties`:
+Set the following environment variables:
 
-```
-google.cloud.vision.key=YOUR_KEY
-spring.ai.api-key=YOUR_OPENAI_OR_GEMINI_KEY
-```
+* `JDBC_DATABASE_URL` — MySQL connection string
+* `JDBC_DATABASE_USERNAME` — Database username
+* `JDBC_DATABASE_PASSWORD` — Database password
+* `GEMINI_KEY` — Google Gemini API Key
+* `MODEL` — *(Optional)* Defaults to `gemini-2.0-flash`
 
 ### **3. Run the Application**
 
-```bash
-mvn spring-boot:run
 ```
+./gradlew bootRun
+```
+
+Server starts at: **[http://localhost:8080](http://localhost:8080)**
 
 ---
 
-## 📡 API Usage Example
+## 📡 API Documentation
 
-### **Request:**
+### **1. Scan Product Image**
+
+`POST /api/scan/image`
+
+Extracts ingredients from an uploaded image and performs safety analysis.
+
+**Parameters:**
+
+* `image`: MultipartFile — Product label photo
+* `userId`: Long — ID of user
+* `category`: String — FOOD (default), COSMETICS, BEVERAGES
+
+---
+
+### **2. Analyze Ingredients Text**
+
+`POST /api/scan/ingredients`
 
 ```json
-POST /api/scan
 {
-  "imageBase64": "<BASE64_ENCODED_IMAGE>"
+  "ingredients": "Sodium Benzoate, Citric Acid, Sugar",
+  "productCategory": "FOOD"
 }
 ```
 
-### **Response:**
+---
 
-```json
-{
-  "ingredients": [
-    {
-      "name": "Sodium Benzoate",
-      "safety": "Harmful",
-      "impact": "Preservative that may cause allergies and hyperactivity in children."
-    }
-  ]
-}
-```
+### **3. User History**
+
+* `GET /api/scan/user/{userId}` — Retrieve all previous scans for a user
+* `GET /api/scan/{scanId}` — Get detailed results for a specific scan
 
 ---
 
-## 🗂️ Database Schema (Simplified)
+## 🧪 Database Schema Overview
 
-```
-ingredients
------------
-id (PK)
-name
-category
-safety_level
-health_impact
-benefits
-```
-
----
-
-## 📌 Roadmap
-
-* [ ] Add user accounts & preference-based ingredient alerts
-* [ ] Mobile app integration (Flutter/React Native)
-* [ ] Ingredient history & analytics dashboard
-* [ ] FDA/EU food ingredient dataset integration
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Feel free to open issues or submit pull requests.
+* **Users:** Stores basic profile information
+* **Scans:** Metadata such as product name and timestamp
+* **Ingredients:** Master table of analyzed ingredients with risk level
+* **ScanResults:** Links scans to ingredients with explanations and scores
 
 ---
 
 ## 📜 License
 
-MIT License – free to use and modify.
-
----
-
-## ✉️ Contact
-
-For questions or suggestions, reach out to **Devbrat Pradhan**.
+This project is managed and maintained by **Devbrat Pradhan** and **Md Nayab**. Contributions are welcome!
